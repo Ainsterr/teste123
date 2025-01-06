@@ -1,91 +1,55 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel de Rastreamento - Usuário</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
-  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap" async defer></script>
+  <title>Rastreamento de Localização</title>
 </head>
 <body>
-  <h1>Rastreamento de Localização - Usuário</h1>
-  <button onclick="startTracking()">Iniciar Rastreamento</button>
-  <div id="map" style="height: 400px; width: 100%;"></div>
+  <h1>Rastreamento de Localização</h1>
+  <button id="iniciarRastreamento">Iniciar Rastreamento</button>
 
   <script>
-    // Configuração do Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyDXXn7wAvwzA2_mT_2dBzpXChXb7JUhJHk",  // Substitua pela sua chave
-      authDomain: "rastreador-1cdf0.firebaseapp.com",
-      databaseURL: "https://rastreador-1cdf0.firebaseio.com",
-      projectId: "rastreador-1cdf0",
-      storageBucket: "rastreador-1cdf0.appspot.com",
-      messagingSenderId: "781824742467",  // Substitua pelo seu ID de envio
-      appId: "1:781824742467:web:bd313c7ad12d2344fbb3f0",  // Substitua pelo seu App ID
-      measurementId: "G-1JXZYMLH6B"  // Substitua pelo seu Measurement ID
-    };
-
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();  // Usando Realtime Database
-
-    let map;
-    let userMarker;
-
-    // Função para inicializar o mapa
-    function initMap() {
-      map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: -23.550520, lng: -46.633308 },  // Localização inicial (São Paulo)
-        zoom: 15,
-      });
+    // Verifica se o navegador suporta a geolocalização
+    if (!navigator.geolocation) {
+      alert("Geolocalização não é suportada pelo seu navegador.");
     }
 
-    // Função para iniciar o rastreamento via GPS
-    function startTracking() {
-      if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(function(position) {
-          const latitude = position.coords.latitude;
-          const longitude = position.coords.longitude;
-          console.log("Latitude: " + latitude + " Longitude: " + longitude);
+    // Função para iniciar o rastreamento
+    document.getElementById('iniciarRastreamento').addEventListener('click', function() {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+        const usuarioId = 'usuario123'; // Defina o ID do usuário aqui
 
-          // Envia a localização para o Firebase
-          sendLocationToFirebase(latitude, longitude);
-
-          // Atualiza o marcador no mapa
-          updateMap(latitude, longitude);
-        }, function(error) {
-          alert("Erro ao obter localização.");
-        }, { enableHighAccuracy: true, maximumAge: 0 });
-      } else {
-        alert("Geolocalização não suportada pelo navegador.");
-      }
-    }
-
-    // Função para enviar a localização para o Firebase
-    function sendLocationToFirebase(latitude, longitude) {
-      const userId = "user123";  // ID do usuário (pode ser obtido via Firebase Auth)
-
-      db.ref('locations/' + userId).push({
-        latitude: latitude,
-        longitude: longitude,
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    // Função para atualizar o marcador no mapa
-    function updateMap(latitude, longitude) {
-      if (userMarker) {
-        userMarker.setPosition(new google.maps.LatLng(latitude, longitude));
-      } else {
-        userMarker = new google.maps.Marker({
-          position: { lat: latitude, lng: longitude },
-          map: map,
-          title: "Sua localização",
+        // Envia os dados para o backend via POST
+        fetch('ttp://localhost:3000/localizacoes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            usuarioId: usuarioId,
+            latitude: latitude,
+            longitude: longitude
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.sucesso) {
+            alert('Localização registrada com sucesso!');
+          } else {
+            alert('Erro ao registrar localização.');
+          }
+        })
+        .catch(error => {
+          console.error('Erro:', error);
+          alert('Erro de comunicação com o servidor.');
         });
-      }
-
-      map.setCenter({ lat: latitude, lng: longitude });
-    }
+      }, function(error) {
+        alert('Erro ao obter a localização: ' + error.message);
+      });
+    });
   </script>
 </body>
 </html>
